@@ -64,62 +64,6 @@ return {
           })
         end,
 
-        ["basedpyright"] = function()
-          vim.lsp.config("basedpyright", {
-            settings = {
-              basedpyright = {
-                disableOrganizeImports = true,
-                analysis = {
-                  ignore = { "*" },
-                  useLibraryCodeForTypes = true,
-                  typeCheckingMode = "standard",
-                  diagnosticMode = "openFilesOnly",
-                  autoImportCompletions = true,
-                }
-              },
-            },
-            before_init = function(_, config)
-              local venv_base_path = table.concat({ vim.env.HOME, "virtualenvs" })
-              local venv_python_path = table.concat({ venv_base_path, "default-venv", "bin", "python" })
-
-              if config.root_dir ~= nil then
-                local root_dir_name = ""
-                for substring in string.gmatch(config.root_dir, "([^/]+)") do
-                  root_dir_name = substring
-                end
-                local project_venv_path = table.concat({ venv_base_path, root_dir_name })
-                local project_venv_bin_path = table.concat({ project_venv_path, "bin", "python" })
-                local function dir_exists(path)
-                  local stat = vim.loop.fs_stat(path)
-                  return stat and stat.type == 'directory'
-                end
-                if not dir_exists(project_venv_path) then
-                  os.execute(string.format("python3 -m venv %s", project_venv_path))
-                  print("Created virtual environment: ", project_venv_path)
-                  local requirements_path = table.concat({ config.root_dir, "requirements.txt" })
-                  local function file_exists(path)
-                    local stat = vim.loop.fs_stat(path)
-                    return stat and stat.type == 'file'
-                  end
-                  if file_exists(requirements_path) then
-                    os.execute(string.format("%s -m pip install -r %s", project_venv_bin_path,
-                      requirements_path))
-                    print("Installed dependencies from requirements.txt")
-                  else
-                    print("No requirements.txt file found.")
-                  end
-                end
-                venv_python_path = project_venv_bin_path
-                print("setting venv: %s", venv_python_path)
-              end
-
-              config.settings.python = {
-                pythonPath = venv_python_path
-              }
-            end,
-          })
-        end,
-
         ["clangd"] = function()
           vim.lsp.config("clangd", {
             cmd = {
@@ -225,9 +169,124 @@ return {
 
     -- Manual setup for Sourcekit (not managed by Mason)
     vim.lsp.config("sourcekit", {
-      capabilities = capabilities
+      capabilities = {
+        vim.tbl_deep_extend(
+          "force", {
+            workspace = {
+              didChangeWatchedFiles = {
+                dynamicRegistration = true
+              }
+            }
+          },
+          vim.lsp.protocol.make_client_capabilities(),
+          cmp_lsp.default_capabilities())
+      },
+      before_init = function(_, config)
+        if config.root_dir == nil then
+          return
+        end
+
+        local build_server_path = config.root_dir .. "/buildServer.json"
+        local stat = vim.loop.fs_stat(build_server_path)
+        if stat and stat.type == "file" then
+          return
+        end
+
+        -- Find .xcodeproj in root dir
+        local xcodeproj = nil
+        local handle = vim.loop.fs_scandir(config.root_dir)
+        if handle then
+          while true do
+            local name, typ = vim.loop.fs_scandir_next(handle)
+            if not name then break end
+            if (typ == "directory" or typ == "link") and name:match("%.xcodeproj$") then
+              xcodeproj = name
+              break
+            end
+          end
+        end
+
+        if not xcodeproj then
+          return
+        end
+
+        local scheme = xcodeproj:gsub("%.xcodeproj$", "")
+        print("Generating buildServer.json for " .. scheme .. "...")
+
+        -- Generate buildServer.json
+        local config_cmd = string.format(
+          "cd %s && xcode-build-server config -project %s -scheme %s",
+          config.root_dir, xcodeproj, scheme
+        )
+        os.execute(config_cmd)
+
+        -- Build in background so the index is populated
+        local build_cmd = string.format(
+          "cd %s && xcodebuild -project %s -scheme %s -destination 'generic/platform=iOS' build &",
+          config.root_dir, xcodeproj, scheme
+        )
+        os.execute(build_cmd)
+        print("Started xcodebuild in background for " .. scheme)
+      end,
     })
     vim.lsp.enable('sourcekit');
+
+    vim.lsp.config("basedpyright", {
+      capabilities = capabilities,
+      root_markers = { "pyrightconfig.json", "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", ".git" },
+      settings = {
+        basedpyright = {
+          disableOrganizeImports = true,
+          analysis = {
+            ignore = { "*" },
+            useLibraryCodeForTypes = true,
+            typeCheckingMode = "standard",
+            diagnosticMode = "openFilesOnly",
+            autoImportCompletions = true,
+          }
+        },
+      },
+      before_init = function(_, config)
+        local venv_base_path = table.concat({ vim.env.HOME, "virtualenvs" }, "/")
+        local venv_python_path = table.concat({ venv_base_path, "default-venv", "bin", "python" }, "/")
+        print("Before init")
+        if config.root_dir ~= nil then
+          local root_dir_name = ""
+          for substring in string.gmatch(config.root_dir, "([^/]+)") do
+            root_dir_name = substring
+          end
+          local project_venv_path = table.concat({ venv_base_path, root_dir_name }, "/")
+          local project_venv_bin_path = table.concat({ project_venv_path, "bin", "python" }, "/")
+          local function dir_exists(path)
+            local stat = vim.loop.fs_stat(path)
+            return stat and stat.type == 'directory'
+          end
+          if not dir_exists(project_venv_path) then
+            os.execute(string.format("python3 -m venv %s", project_venv_path))
+            print("Created virtual environment: ", project_venv_path)
+            local requirements_path = table.concat({ config.root_dir, "requirements.txt" }, "/")
+            local function file_exists(path)
+              local stat = vim.loop.fs_stat(path)
+              return stat and stat.type == 'file'
+            end
+            if file_exists(requirements_path) then
+              os.execute(string.format("%s -m pip install -r %s", project_venv_bin_path,
+                requirements_path))
+              print("Installed dependencies from requirements.txt")
+            else
+              print("No requirements.txt file found.")
+            end
+          end
+          venv_python_path = project_venv_bin_path
+          print("setting venv: %s", venv_python_path)
+        end
+
+        config.settings.python = {
+          pythonPath = venv_python_path
+        }
+      end,
+    })
+    vim.lsp.enable('basedpyright');
 
     local cmp_select = { behavior = cmp.SelectBehavior.Select }
 

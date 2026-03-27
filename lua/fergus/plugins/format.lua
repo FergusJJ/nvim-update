@@ -6,6 +6,7 @@ return {
 
     conform.setup({
       formatters_by_ft = {
+        python = { "ruff", stop_after_first = true },
         javascript = { "prettierd", "prettier", stop_after_first = true },
         typescript = { "prettierd", "prettier", stop_after_first = true },
         javascriptreact = { "prettierd", "prettier", stop_after_first = true },
@@ -13,7 +14,8 @@ return {
         json = { "prettierd", "prettier", stop_after_first = true },
         jsonc = { "prettierd", "prettier", stop_after_first = true },
         prisma = { "prettierd", "prettier", stop_after_first = true },
-        swift = { "swiftformat" }
+        swift = { "swiftformat" },
+        proto = { "NULL_LS_FORMATTING" }
       },
       format_on_save = {
         timeout_ms = 500,
