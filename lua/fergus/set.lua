@@ -34,6 +34,8 @@ vim.opt.colorcolumn = "80"
 
 vim.opt.autoread = true
 
+vim.opt.runtimepath:prepend("/Users/fergusjohnson/.opam/default/share/ocp-indent/vim")
+
 vim.fn.timer_start(2000, function()
   vim.cmd("silent! checktime")
 end, { ["repeat"] = -1 })

@@ -3,13 +3,7 @@ return {
   dependencies = {
     "williamboman/mason.nvim",
     "williamboman/mason-lspconfig.nvim",
-    "hrsh7th/cmp-nvim-lsp",
-    "hrsh7th/cmp-buffer",
-    "hrsh7th/cmp-path",
-    "hrsh7th/cmp-cmdline",
-    "hrsh7th/nvim-cmp",
-    "L3MON4D3/LuaSnip",
-    "saadparwaiz1/cmp_luasnip",
+    "saghen/blink.cmp",
     "j-hui/fidget.nvim",
     {
       "folke/lazydev.nvim",
@@ -25,13 +19,7 @@ return {
   },
 
   config = function()
-    local cmp = require('cmp')
-    local cmp_lsp = require("cmp_nvim_lsp")
-    local capabilities = vim.tbl_deep_extend(
-      "force",
-      {},
-      vim.lsp.protocol.make_client_capabilities(),
-      cmp_lsp.default_capabilities())
+    local capabilities = require('blink.cmp').get_lsp_capabilities()
 
     require("fidget").setup({})
     require("mason").setup()
@@ -53,7 +41,6 @@ return {
         -- "ruff",
         "rust_analyzer",
         "solidity_ls_nomicfoundation",
-        "ts_ls",
       },
 
       handlers = {
@@ -86,7 +73,7 @@ return {
 
         ["cssmodules_ls"] = function()
           vim.lsp.config("cssmodules_ls", {
-            filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
+            filetypes = { "css", "scss", "less" },
             capabilities = capabilities,
             init_options = {
               camelCase = "dashes"
@@ -157,30 +144,16 @@ return {
           })
         end,
 
-        ["ts_ls"] = function()
-          vim.lsp.config("ts_ls", {
-            filetypes = { "typescript", "javascript", "typescriptreact", "javascriptreact" },
-            capabilities = capabilities
-          })
-        end,
       }
     })
     vim.lsp.enable('clangd');
 
     -- Manual setup for Sourcekit (not managed by Mason)
+    local sourcekit_capabilities = require('blink.cmp').get_lsp_capabilities()
+    sourcekit_capabilities.workspace = sourcekit_capabilities.workspace or {}
+    sourcekit_capabilities.workspace.didChangeWatchedFiles = { dynamicRegistration = true }
     vim.lsp.config("sourcekit", {
-      capabilities = {
-        vim.tbl_deep_extend(
-          "force", {
-            workspace = {
-              didChangeWatchedFiles = {
-                dynamicRegistration = true
-              }
-            }
-          },
-          vim.lsp.protocol.make_client_capabilities(),
-          cmp_lsp.default_capabilities())
-      },
+      capabilities = sourcekit_capabilities,
       before_init = function(_, config)
         if config.root_dir == nil then
           return
@@ -288,32 +261,15 @@ return {
     })
     vim.lsp.enable('basedpyright');
 
-    local cmp_select = { behavior = cmp.SelectBehavior.Select }
-
-    cmp.setup({
-      snippet = {
-        expand = function(args)
-          require('luasnip').lsp_expand(args.body)
-        end,
-      },
-      mapping = cmp.mapping.preset.insert({
-        ['<C-p>'] = cmp.mapping.select_prev_item(cmp_select),
-        ['<C-n>'] = cmp.mapping.select_next_item(cmp_select),
-        ['<C-y>'] = cmp.mapping.confirm({ select = true }),
-        ["<C-Space>"] = cmp.mapping.complete(),
-      }),
-      sources = cmp.config.sources({
-        { name = "lazydev", group_index = 0 },
-        { name = 'nvim_lsp' },
-        { name = 'luasnip' },
-      }, {
-        { name = 'buffer' },
-        { name = 'path' },
-      })
+    -- tsgo: Go-based TypeScript language server (install: npm install -g @typescript/native-preview)
+    vim.lsp.config("tsgo", {
+      capabilities = capabilities,
+      filetypes = { "typescript", "javascript", "typescriptreact", "javascriptreact" },
     })
+    vim.lsp.enable('tsgo');
 
     vim.diagnostic.config({
-      update_in_insert = true,
+      update_in_insert = false,
       float = {
         focusable = true,
         style = "minimal",

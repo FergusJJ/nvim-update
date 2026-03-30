@@ -9,6 +9,11 @@ return {
       code_coverage = {
         enabled = true,
       },
+      integrations = {
+        nvim_lsp = {
+          enabled = false,
+        },
+      },
     })
     vim.keymap.set("n", "<leader>xl", "<cmd>XcodebuildToggleLogs<cr>", { desc = "Toggle Logs" })
     vim.keymap.set("n", "<leader>xb", "<cmd>XcodebuildBuild<cr>", { desc = "Build Project" })
