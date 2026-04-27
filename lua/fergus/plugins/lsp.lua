@@ -165,38 +165,50 @@ return {
           return
         end
 
-        -- Find .xcodeproj in root dir
+        -- Find .xcworkspace or .xcodeproj in root dir
+        local xcworkspace = nil
         local xcodeproj = nil
         local handle = vim.loop.fs_scandir(config.root_dir)
         if handle then
           while true do
             local name, typ = vim.loop.fs_scandir_next(handle)
             if not name then break end
-            if (typ == "directory" or typ == "link") and name:match("%.xcodeproj$") then
-              xcodeproj = name
-              break
+            if (typ == "directory" or typ == "link") then
+              if name:match("%.xcworkspace$") then
+                xcworkspace = name
+              elseif name:match("%.xcodeproj$") then
+                xcodeproj = name
+              end
             end
           end
         end
 
-        if not xcodeproj then
+        -- Prefer workspace over project (workspaces include SPM dependencies)
+        local project_flag, project_file
+        if xcworkspace then
+          project_flag = "-workspace"
+          project_file = xcworkspace
+        elseif xcodeproj then
+          project_flag = "-project"
+          project_file = xcodeproj
+        else
           return
         end
 
-        local scheme = xcodeproj:gsub("%.xcodeproj$", "")
+        local scheme = project_file:gsub("%.xcworkspace$", ""):gsub("%.xcodeproj$", "")
         print("Generating buildServer.json for " .. scheme .. "...")
 
         -- Generate buildServer.json
         local config_cmd = string.format(
-          "cd %s && xcode-build-server config -project %s -scheme %s",
-          config.root_dir, xcodeproj, scheme
+          "cd %s && xcode-build-server config %s %s -scheme %s",
+          config.root_dir, project_flag, project_file, scheme
         )
         os.execute(config_cmd)
 
         -- Build in background so the index is populated
         local build_cmd = string.format(
-          "cd %s && xcodebuild -project %s -scheme %s -destination 'generic/platform=iOS' build &",
-          config.root_dir, xcodeproj, scheme
+          "cd %s && xcodebuild %s %s -scheme %s -destination 'generic/platform=iOS' build &",
+          config.root_dir, project_flag, project_file, scheme
         )
         os.execute(build_cmd)
         print("Started xcodebuild in background for " .. scheme)

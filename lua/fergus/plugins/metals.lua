@@ -7,8 +7,10 @@ return {
   config = function()
     -- JDK 17+ restricts access to these packages
     -- so export them so metals has access for code completion
-    vim.env.JAVA_TOOL_OPTIONS = table.concat({
-      "-Xmx8G",
+    -- Use JDK_JAVA_OPTIONS instead of JAVA_TOOL_OPTIONS to avoid
+    -- the "Picked up" stderr message that corrupts Bloop's file URIs
+    vim.env.JDK_JAVA_OPTIONS = table.concat({
+      "-Xmx4G",
       "--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
       "--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED",
       "--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED",
@@ -21,12 +23,13 @@ return {
     vim.env.BLOOP_JAVA_HOME = "/Users/fergusjohnson/.sdkman/candidates/java/25-tem"
 
     local metals_config = require("metals").bare_config()
-    metals_config.capabilities = require("cmp_nvim_lsp").default_capabilities()
+    metals_config.capabilities = require("blink.cmp").get_lsp_capabilities()
 
     metals_config.settings = {
       showImplicitArguments = true,
       excludedPackages = { "akka.actor.typed.javadsl", "com.github.swagger.akka.javadsl" },
       testUserInterface = "Code Lenses",
+      serverVersion = "2.0.0-M8",
     }
 
     -- You can remove the 'init_options' block we tried earlier

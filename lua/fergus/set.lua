@@ -33,7 +33,7 @@ vim.opt.updatetime = 50
 vim.opt.colorcolumn = "80"
 
 vim.opt.autoread = true
-
+vim.opt.mouse = ""
 vim.opt.runtimepath:prepend("/Users/fergusjohnson/.opam/default/share/ocp-indent/vim")
 
 vim.fn.timer_start(2000, function()

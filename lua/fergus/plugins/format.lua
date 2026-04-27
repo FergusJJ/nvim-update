@@ -7,20 +7,33 @@ return {
     conform.setup({
       formatters_by_ft = {
         python = { "ruff", stop_after_first = true },
-        javascript = { "prettierd", stop_after_first = true },
-        typescript = { "prettierd", "eslint_d", stop_after_first = false },
-        javascriptreact = { "prettierd", stop_after_first = true },
-        typescriptreact = { "prettierd", "eslint_d", stop_after_first = false },
+        javascript = { "prettierd", "eslint_d", stop_after_first = true },
+        typescript = { "prettierd", "eslint_d", stop_after_first = true },
+        javascriptreact = { "prettierd", "eslint_d", stop_after_first = true },
+        typescriptreact = { "prettierd", "eslint_d", stop_after_first = true },
         json = { "prettierd", stop_after_first = true },
         jsonc = { "prettierd", stop_after_first = true },
         prisma = { "prettierd", stop_after_first = true },
+        proto = { "NULL_LS_FORMATTING" },
         swift = { "swiftformat" },
-        proto = { "NULL_LS_FORMATTING" }
       },
-      format_on_save = {
-        timeout_ms = 2000,
-        lsp_fallback = true,
-      },
+      -- Custom args would go here
+      -- formatters = {
+      --   swift = {
+      --     swiftformat = {
+      --       prepend_args = {}
+      --     }
+      --   }
+      -- },
+      format_on_save = function(bufnr)
+        local ignore_filetypes = { "oil" }
+        if vim.tbl_contains(ignore_filetypes, vim.bo[bufnr].filetype) then
+          return
+        end
+
+        return { timeout_ms = 500, lsp_fallback = true }
+      end,
+      log_level = vim.log.levels.ERROR
     })
 
     vim.keymap.set({ "n", "v" }, "<leader>mp", function()
