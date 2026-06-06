@@ -11,7 +11,7 @@ return {
       },
       integrations = {
         nvim_lsp = {
-          enabled = false,
+          enabled = true,
         },
       },
     })
