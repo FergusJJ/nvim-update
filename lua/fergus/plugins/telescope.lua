@@ -134,10 +134,10 @@ return {
       }))
     end)
 
-    -- search for MARK: - comments
+    -- search for FERGUS: - comments
     vim.keymap.set('n', '<leader>pm', function()
       builtin.grep_string(require('telescope.themes').get_ivy({
-        search = 'MARK: -'
+        search = 'FERGUS: -'
       }))
     end)
 

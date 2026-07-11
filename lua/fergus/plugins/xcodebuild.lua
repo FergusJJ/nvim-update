@@ -1,5 +1,6 @@
 return {
   "wojciech-kulik/xcodebuild.nvim",
+  commit = "84419f4068381489654e07e25f32f038f1f674f2",
   dependencies = {
     "nvim-telescope/telescope.nvim",
     "MunifTanjim/nui.nvim",
